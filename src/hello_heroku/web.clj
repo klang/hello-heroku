@@ -1,4 +1,7 @@
 (ns hello-heroku.web
+  (:use [hello-heroku.mem :only [mget mset]]
+        [hiccup core form]
+        [hiccup.page :only (html5)])
   (:require [compojure.core :refer [defroutes GET PUT POST DELETE ANY]]
             [compojure.handler :refer [site]]
             [compojure.route :as route]
@@ -21,9 +24,27 @@
       (basic/wrap-basic-authentication authenticated?)))
 
 (defroutes app
+  (GET "/" [] 
+       (html5 
+        (form-to 
+         [:post "/drop"]
+         "key to collect values from later:" (text-field :key) [:br]
+         (text-field :value)
+         (submit-button "drop"))))
+  (ANY "/drop" [key value] 
+        (do 
+          (mset key value)
+          (html5 
+           [:pre (str key"="value)])))
+  (GET "/:key" [key] 
+       (html5 
+        (let [value (mget key)]
+          [:pre (if (nil? value) 
+                  "you only get one shot" 
+                  (str key "=" value))])))
   (ANY "/repl" {:as req}
        (drawbridge req))
-  (GET "/" []
+  #_(GET "/" []
        {:status 200
         :headers {"Content-Type" "text/plain"}
         :body (pr-str ["Hello" :from 'Heroku])})
